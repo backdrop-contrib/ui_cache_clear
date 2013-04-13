@@ -19,14 +19,14 @@ function ui_cache_clear_panels_callback($task_name, $handler_name) {
   // Load panels/plugins/task_handlers/panel_context.inc
   ctools_get_plugins('page_manager', 'task_handlers', 'panel_context');
 
-  // Get panel display. 
+  // Get panel display.
   $display = panels_panel_context_get_display($handler);
   $display->context = array();
   $display->args = array();
   $display->css_id = $handler->conf['css_id'];
   $task_name_prepared = page_manager_make_task_name($handler->task, $handler->subtask);
   $display->cache_key = 'panel_context:' . $task_name_prepared . ':' . $handler->name;
-  
+
   // Try to clear with API for Panels cache plugins.
   panels_clear_cached_content($display);
   // Manualy clear caches for cache plugins with known problems.
@@ -44,7 +44,7 @@ function _ui_cache_clear_panels_clear_cached_content($display) {
       $cid = '';
       $conf = $pane->cache['settings'];
       $method = $pane->cache['method'];
-      
+
       if ($method == 'simple' && !is_numeric($display->did)) {
         // Problem solved: Simple cache can't be cleared for in-code displays.
         $cid = panels_simple_cache_get_id($conf, $display, array(), array(), $pane);
