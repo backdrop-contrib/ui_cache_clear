@@ -1,0 +1,153 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function ui_cache_clear_menu() {
+  $items = array();
+  if (module_exists('block')) {
+    $items['admin/structure/block/manage/%/%/cache_clear'] = array(
+      'title' => 'Clear cache',
+      'page callback' => 'ui_cache_clear_block_callback',
+      'page arguments' => array(4, 5),
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_INLINE,
+      'access arguments' => array('use clear cache ui'),
+
+    );
+  }
+
+  if (module_exists('views_ui')) {
+    $items['admin/structure/views/view/%views_ui_cache/cache_clear'] = array(
+      'title' => 'Clear cache',
+      'page callback' => 'ui_cache_clear_views_callback',
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+      'access arguments' => array('use clear cache ui'),
+    );
+  }
+
+  if (module_exists('page_manager') && module_exists('panels')) {
+    $items['admin/structure/pages/%/operation/%/handlers/%/cache_clear'] = array(
+      'title' => 'Clear cache',
+      'page callback' => 'ui_cache_clear_panels_callback',
+      'page arguments' => array(5, 7),
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+      'access arguments' => array('use clear cache ui'),
+      'file' => 'ui_cache_clear.panels.inc',
+    );
+  }
+
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function ui_cache_clear_permission() {
+  return array(
+    'use clear cache ui' => array(
+      'title' => t('Use contextual UI Cache Clear links'),
+      'description' => t('Use contextual links to flush blocks, Views and Panels cache.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_contextual_links_view_alter().
+ * @see views_ui_contextual_links_view_alter().
+ */
+function ui_cache_clear_contextual_links_view_alter(&$element, $items) {
+  // Append the display ID to the Views UI "Clear cache".
+  if (!empty($element['#links']['views-ui-cache-clear']) && !empty($element['#element']['#views_contextual_links_info']['views_ui']['view_display_id'])) {
+    $display_id = $element['#element']['#views_contextual_links_info']['views_ui']['view_display_id'];
+    $element['#links']['views-ui-cache-clear']['href'] .= '/' . $display_id;
+
+    // Remove duplicated "Clear cache" links for blocks.
+    unset($element['#links']['block-cache-clear']);
+  }
+}
+
+/**
+ * Block clear cache callback.
+ */
+function ui_cache_clear_block_callback($module, $delta) {
+  $cache_cid = $module . ':' . $delta;
+  cache_clear_all($cache_cid, 'cache_block', TRUE);
+  drupal_set_message(t('Block %cid cache cleared.', array('%cid' => $cache_cid)));
+
+  drupal_goto();
+}
+
+/**
+ * Views clear cache callback.
+ */
+function ui_cache_clear_views_callback($display_id) {
+  $view_name = arg(4);
+  $view = views_get_view($view_name);
+
+  $cache_cid = $view_name;
+  if (isset($display_id)) {
+    $cache_cid .= ':' . $display_id;
+    $view->set_display($display_id);
+  }
+  else {
+    $view->init_display();
+  }
+
+  // Get name of current cache plugin to inform user.
+  $cache_plugin = $view->display_handler->get_plugin('cache');
+  $plugin_name = $cache_plugin->plugin_name;
+
+  // Clear views cache.
+  cache_clear_all($cache_cid, 'cache_views_data', TRUE);
+  drupal_set_message(t('Views %cid cache cleared for cache plugin %plugin.', array('%cid' => $cache_cid, '%plugin' => $plugin_name)));
+
+  // Clear block cache if needed.
+  if ($view->display_handler->plugin_name == 'block' &&
+      $view->display_handler->get_cache_type() !== DRUPAL_NO_CACHE
+      ) {
+
+    $delta = $view_name . '-' . $view->current_display;
+    // @see views_plugin_display_block::save_block_cache().
+    if (strlen($delta) >= 32) {
+      $delta = md5($delta);
+    }
+    $cache_cid = 'views:' . $delta;
+    cache_clear_all($cache_cid, 'cache_block', TRUE);
+    drupal_set_message(t('Block %cid cache cleared.', array('%cid' => $cache_cid)));
+  }
+
+  drupal_goto();
+}
+
+/**
+ * Implements hook_ctools_plugin_pre_alter().
+ * Overwrite Panels 'contextual link' callback to add link "Clear cache".
+ */
+function ui_cache_clear_ctools_plugin_pre_alter(&$plugin, &$info) {
+  // Override a function defined by the plugin.
+  if ($info['type'] == 'task_handlers' && $plugin['name'] == 'panel_context') {
+    $plugin['contextual link'] = 'ui_cache_clear_panels_contextual_links';
+  }
+}
+
+/**
+ *  Contextual link callback for Panels task handler.
+ */
+function ui_cache_clear_panels_contextual_links($handler, $plugin, $contexts, $args) {
+  // Add default links.
+  $links = ctools_task_handler_default_contextual_link($handler, $plugin, $contexts, $args);
+  if (!user_access('use clear cache ui')) {
+    return;
+  }
+
+  $links[] = array(
+    'href' => 'admin/structure/pages/nojs/operation/' . $handler->task . '/handlers/' . $handler->name . '/cache_clear',
+    'title' => 'Clear cache',
+    'query' => drupal_get_destination(),
+  );
+  return $links;
+}
