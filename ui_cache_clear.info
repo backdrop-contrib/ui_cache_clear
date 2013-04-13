@@ -1,0 +1,5 @@
+name = UI Clear Cache
+description = Administrative interface for clearing Blocks, Views and Panels cache.
+package = Administration
+core = 7.x
+dependencies[] = contextual
