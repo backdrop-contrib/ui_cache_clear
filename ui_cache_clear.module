@@ -18,12 +18,23 @@ function ui_cache_clear_menu() {
   }
 
   if (module_exists('views_ui')) {
-    $items['admin/structure/views/view/%views_ui_cache/cache_clear'] = array(
+    $items['admin/structure/views/ui_cache_clear/%views_ui_cache'] = array(
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'access callback' => 'user_access',
+      'access arguments' => array('use clear cache ui'),
+      'tab_root' => 'admin/structure/views/ui_cache_clear/%',
+      'tab_parent' => 'admin/structure/views/ui_cache_clear/%',
+    );
+
+    $items['admin/structure/views/view/%views_ui_cache/cacheclear'] = array(
       'title' => 'Clear cache',
       'page callback' => 'ui_cache_clear_views_callback',
       'type' => MENU_LOCAL_TASK,
       'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+      'access callback' => 'user_access',
       'access arguments' => array('use clear cache ui'),
+      'tab_root' => 'admin/structure/views/ui_cache_clear/%',
+      'tab_parent' => 'admin/structure/views/ui_cache_clear/%',
     );
   }
 
@@ -61,12 +72,23 @@ function ui_cache_clear_permission() {
  */
 function ui_cache_clear_contextual_links_view_alter(&$element, $items) {
   // Append the display ID to the Views UI "Clear cache".
-  if (!empty($element['#links']['views-ui-cache-clear']) && !empty($element['#element']['#views_contextual_links_info']['views_ui']['view_display_id'])) {
-    $display_id = $element['#element']['#views_contextual_links_info']['views_ui']['view_display_id'];
-    $element['#links']['views-ui-cache-clear']['href'] .= '/' . $display_id;
-
+  if (!empty($element['#links']['ui-cache-clear-']) && !empty($element['#element']['#views_contextual_links_info']['ui_cache_clear']['view_display_id'])) {
+    $display_id = $element['#element']['#views_contextual_links_info']['ui_cache_clear']['view_display_id'];
+    $element['#links']['ui-cache-clear-']['href'] .= '/' . $display_id;
     // Remove duplicated "Clear cache" links for blocks.
     unset($element['#links']['block-cache-clear']);
+  }
+}
+
+/**
+ * Implements hook_views_plugins_alter().
+ */
+function ui_cache_clear_views_plugins_alter(&$plugins) {
+  foreach ($plugins['display'] as &$display) {
+    $display['contextual links']['ui_cache_clear'] = array(
+      'parent path' => 'admin/structure/views/ui_cache_clear',
+      'argument properties' => array('name'),
+    );
   }
 }
 
