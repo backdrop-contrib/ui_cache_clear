@@ -23,6 +23,8 @@ function ui_cache_clear_panels_callback($task_name, $handler_name) {
   $display = panels_panel_context_get_display($handler);
   $display->context = array();
   $display->args = array();
+
+  // Set additional data which may be used in cache plugins.
   $display->css_id = $handler->conf['css_id'];
   $task_name_prepared = page_manager_make_task_name($handler->task, $handler->subtask);
   $display->cache_key = 'panel_context:' . $task_name_prepared . ':' . $handler->name;
@@ -31,13 +33,15 @@ function ui_cache_clear_panels_callback($task_name, $handler_name) {
   panels_clear_cached_content($display);
   // Manualy clear caches for cache plugins with known problems.
   _ui_cache_clear_panels_clear_cached_content($display);
-  // Find cache cids in database queries log.
 
-  drupal_set_message(t('Panel cache cleared.'));
+  drupal_set_message(t('Panel %panel cache cleared.', array('%panel' => $task['title'])));
 
   drupal_goto();
 }
 
+/**
+ * Collection of hacks for different panels cache plugins known problems.
+ */
 function _ui_cache_clear_panels_clear_cached_content($display) {
   foreach ($display->content as $pane) {
     if (!empty($pane->cache['method'])) {

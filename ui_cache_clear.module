@@ -1,23 +1,41 @@
 <?php
 
 /**
+ * @file
+ * Module adds contextual links for clearing Blocks, Views and Panels cache.
+ */
+
+/**
  * Implements hook_menu().
  */
 function ui_cache_clear_menu() {
   $items = array();
   if (module_exists('block')) {
-    $items['admin/structure/block/manage/%/%/cache_clear'] = array(
+    // Special root item with custom access arguments.
+    $items['admin/structure/block/ui_cache_clear/%/%'] = array(
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'access callback' => 'user_access',
+      'access arguments' => array('use clear cache ui'),
+      'tab_root' => 'admin/structure/block/ui_cache_clear/%',
+      'tab_parent' => 'admin/structure/block/ui_cache_clear/%',
+    );
+
+    $items['admin/structure/block/manage/%/%/cacheclear'] = array(
       'title' => 'Clear cache',
       'page callback' => 'ui_cache_clear_block_callback',
       'page arguments' => array(4, 5),
       'type' => MENU_LOCAL_TASK,
       'context' => MENU_CONTEXT_INLINE,
+      'access callback' => 'user_access',
       'access arguments' => array('use clear cache ui'),
+      'tab_root' => 'admin/structure/block/ui_cache_clear/%',
+      'tab_parent' => 'admin/structure/block/ui_cache_clear/%',
 
     );
   }
 
   if (module_exists('views_ui')) {
+    // Special root item with custom access arguments.
     $items['admin/structure/views/ui_cache_clear/%views_ui_cache'] = array(
       'type' => MENU_DEFAULT_LOCAL_TASK,
       'access callback' => 'user_access',
@@ -50,7 +68,6 @@ function ui_cache_clear_menu() {
     );
   }
 
-
   return $items;
 }
 
@@ -67,8 +84,35 @@ function ui_cache_clear_permission() {
 }
 
 /**
+ * Implements hook_block_view_alter().
+ */
+function ui_cache_clear_block_view_alter(&$data, $block) {
+  if ($block->cache == DRUPAL_NO_CACHE) {
+    // Cache disabled for this block.
+    return;
+  }
+
+  if (!empty($data['content']['#contextual_links']['ui_cache_clear'])) {
+    // Views hook_contextual_links_view_alter already added contextual link.
+    return;
+  }
+  $key = $block->module . '_' . $block->delta;
+  if ($key != 'system_main' && $key != 'system_help') {
+    // Convert block content to array.
+    if (!isset($data['content'])) {
+      $data['content'] = array();
+    }
+    if (!is_array($data['content'])) {
+      $data['content'] = array('#markup' => $data['content']);
+    }
+    $data['content']['#contextual_links']['ui_cache_clear'] = array('admin/structure/block/ui_cache_clear', array($block->module, $block->delta));
+  }
+
+}
+
+/**
  * Implements hook_contextual_links_view_alter().
- * @see views_ui_contextual_links_view_alter().
+ * @see views_ui_contextual_links_view_alter()
  */
 function ui_cache_clear_contextual_links_view_alter(&$element, $items) {
   // Append the display ID to the Views UI "Clear cache".
@@ -147,6 +191,7 @@ function ui_cache_clear_views_callback($display_id) {
 
 /**
  * Implements hook_ctools_plugin_pre_alter().
+ *
  * Overwrite Panels 'contextual link' callback to add link "Clear cache".
  */
 function ui_cache_clear_ctools_plugin_pre_alter(&$plugin, &$info) {
@@ -157,7 +202,7 @@ function ui_cache_clear_ctools_plugin_pre_alter(&$plugin, &$info) {
 }
 
 /**
- *  Contextual link callback for Panels task handler.
+ * Contextual link callback for Panels task handler.
  */
 function ui_cache_clear_panels_contextual_links($handler, $plugin, $contexts, $args) {
   // Add default links.

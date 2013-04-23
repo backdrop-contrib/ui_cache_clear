@@ -1,4 +1,4 @@
-name = UI Clear Cache
+name = UI Cache Clear
 description = Administrative interface for clearing Blocks, Views and Panels cache.
 package = Administration
 core = 7.x
