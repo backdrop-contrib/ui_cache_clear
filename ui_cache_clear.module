@@ -111,20 +111,6 @@ function ui_cache_clear_block_view_alter(&$data, $block) {
 }
 
 /**
- * Implements hook_contextual_links_view_alter().
- * @see views_ui_contextual_links_view_alter()
- */
-function ui_cache_clear_contextual_links_view_alter(&$element, $items) {
-  // Append the display ID to the Views UI "Clear cache".
-  if (!empty($element['#links']['ui-cache-clear-']) && !empty($element['#element']['#views_contextual_links_info']['ui_cache_clear']['view_display_id'])) {
-    $display_id = $element['#element']['#views_contextual_links_info']['ui_cache_clear']['view_display_id'];
-    $element['#links']['ui-cache-clear-']['href'] .= '/' . $display_id;
-    // Remove duplicated "Clear cache" links for blocks.
-    unset($element['#links']['block-cache-clear']);
-  }
-}
-
-/**
  * Implements hook_views_plugins_alter().
  */
 function ui_cache_clear_views_plugins_alter(&$plugins) {
@@ -133,6 +119,18 @@ function ui_cache_clear_views_plugins_alter(&$plugins) {
       'parent path' => 'admin/structure/views/ui_cache_clear',
       'argument properties' => array('name'),
     );
+  }
+}
+
+/**
+ * Implements hook_contextual_links_view_alter().
+ * @see views_ui_contextual_links_view_alter()
+ */
+function ui_cache_clear_contextual_links_view_alter(&$element, $items) {
+  // Append the display ID to "Clear cache" link.
+  if (!empty($element['#links']['ui-cache-clear-']) && !empty($element['#element']['#views_contextual_links_info']['ui_cache_clear']['view_display_id'])) {
+    $display_id = $element['#element']['#views_contextual_links_info']['ui_cache_clear']['view_display_id'];
+    $element['#links']['ui-cache-clear-']['href'] .= '/' . $display_id;
   }
 }
 
@@ -173,7 +171,7 @@ function ui_cache_clear_views_callback($display_id) {
 
   // Clear block cache if needed.
   if ($view->display_handler->plugin_name == 'block' &&
-      $view->display_handler->get_cache_type() !== DRUPAL_NO_CACHE
+      $view->display_handler->get_cache_type() != DRUPAL_NO_CACHE
       ) {
 
     $delta = $view_name . '-' . $view->current_display;
@@ -195,7 +193,6 @@ function ui_cache_clear_views_callback($display_id) {
  * Overwrite Panels 'contextual link' callback to add link "Clear cache".
  */
 function ui_cache_clear_ctools_plugin_pre_alter(&$plugin, &$info) {
-  // Override a function defined by the plugin.
   if ($info['type'] == 'task_handlers' && $plugin['name'] == 'panel_context') {
     $plugin['contextual link'] = 'ui_cache_clear_panels_contextual_links';
   }
@@ -213,7 +210,7 @@ function ui_cache_clear_panels_contextual_links($handler, $plugin, $contexts, $a
 
   $links[] = array(
     'href' => 'admin/structure/pages/nojs/operation/' . $handler->task . '/handlers/' . $handler->name . '/cache_clear',
-    'title' => 'Clear cache',
+    'title' => t('Clear cache'),
     'query' => drupal_get_destination(),
   );
   return $links;
