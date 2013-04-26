@@ -44,26 +44,28 @@ function ui_cache_clear_panels_callback($task_name, $handler_name) {
  */
 function _ui_cache_clear_panels_clear_cached_content($display) {
   foreach ($display->content as $pane) {
-    if (!empty($pane->cache['method'])) {
-      $cid = '';
-      $conf = $pane->cache['settings'];
-      $method = $pane->cache['method'];
+    if (empty($pane->cache['method'])) {
+      continue;
+    }
 
-      if ($method == 'simple' && !is_numeric($display->did)) {
-        // Problem solved: Simple cache can't be cleared for in-code displays.
-        $cid = panels_simple_cache_get_id($conf, $display, array(), array(), $pane);
-        // Trim cid to clear multiple panes and ignore granularity.
-        $cid = implode(':', array_slice(explode(':', $cid, 4), 0, 3));
-        cache_clear_all($cid, 'cache', TRUE);
-      }
-      elseif ($method == 'panels_hash_cache') {
-        // Problem solved: Panels Hash Cache can't be cleared with API.
-        $cid = panels_hash_cache_get_id($conf, $display, array(), array(), $pane);
-        // Trim cid to clear multiple panes and ignore granularity.
-        $cid = implode('-', array_slice(explode('-', $cid, 5), 0, 4));
+    $cid = '';
+    $conf = $pane->cache['settings'];
+    $method = $pane->cache['method'];
 
-        cache_clear_all($cid, 'panels_hash_cache', TRUE);
-      }
+    if ($method == 'simple' && !is_numeric($display->did)) {
+      // Problem solved: Simple cache can't be cleared for in-code displays.
+      $cid = panels_simple_cache_get_id($conf, $display, array(), array(), $pane);
+      // Trim cid to clear multiple panes and ignore granularity.
+      $cid = implode(':', array_slice(explode(':', $cid, 4), 0, 3));
+      cache_clear_all($cid, 'cache', TRUE);
+    }
+    elseif ($method == 'panels_hash_cache') {
+      // Problem solved: Panels Hash Cache can't be cleared with API.
+      $cid = panels_hash_cache_get_id($conf, $display, array(), array(), $pane);
+      // Trim cid to clear multiple panes and ignore granularity.
+      $cid = implode('-', array_slice(explode('-', $cid, 5), 0, 4));
+
+      cache_clear_all($cid, 'panels_hash_cache', TRUE);
     }
   }
 }

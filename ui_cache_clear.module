@@ -105,7 +105,10 @@ function ui_cache_clear_block_view_alter(&$data, $block) {
     if (!is_array($data['content'])) {
       $data['content'] = array('#markup' => $data['content']);
     }
-    $data['content']['#contextual_links']['ui_cache_clear'] = array('admin/structure/block/ui_cache_clear', array($block->module, $block->delta));
+    $data['content']['#contextual_links']['ui_cache_clear'] = array(
+      'admin/structure/block/ui_cache_clear',
+      array($block->module, $block->delta),
+    );
   }
 
 }
