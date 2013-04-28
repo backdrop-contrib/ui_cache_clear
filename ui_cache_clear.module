@@ -156,13 +156,8 @@ function ui_cache_clear_views_callback($display_id) {
   $view = views_get_view($view_name);
 
   $cache_cid = $view_name;
-  if (isset($display_id)) {
-    $cache_cid .= ':' . $display_id;
-    $view->set_display($display_id);
-  }
-  else {
-    $view->init_display();
-  }
+  $cache_cid .= ':' . $display_id;
+  $view->set_display($display_id);
 
   // Get name of current cache plugin to inform user.
   $cache_plugin = $view->display_handler->get_plugin('cache');
