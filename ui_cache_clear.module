@@ -68,6 +68,13 @@ function ui_cache_clear_menu() {
     );
   }
 
+  $items['admin/config/development/performance/ui_cache_clear/page'] = array(
+    'title' => 'Clear page cache',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'ui_cache_clear_page_callback',
+    'access arguments' => array('use clear cache ui'),
+  );
+
   return $items;
 }
 
@@ -138,6 +145,27 @@ function ui_cache_clear_contextual_links_view_alter(&$element, $items) {
 }
 
 /**
+ * Implements hook_admin_menu_output_build().
+ */
+function ui_cache_clear_admin_menu_output_build(&$content) {
+  $item = array(
+    '#title' => t('Current page & Boost'),
+    '#href' => 'admin/config/development/performance/ui_cache_clear/page',
+    '#weight' => 100,
+    '#access' => user_access('use clear cache ui'),
+  );
+
+  if (!empty($content['icon']['icon']['flush-cache']['#access'])) {
+    $content['icon']['icon']['flush-cache']['ui_cache_clear'] = $item;
+  }
+  else {
+    // Add link to upper level of Admin menu.
+    $content['icon']['icon']['ui_cache_clear'] = $item;
+    $content['icon']['icon']['ui_cache_clear']['#title'] = t('Current page & Boost cache flush');
+  }
+}
+
+/**
  * Block clear cache callback.
  */
 function ui_cache_clear_block_callback($module, $delta) {
@@ -181,6 +209,51 @@ function ui_cache_clear_views_callback($display_id) {
     cache_clear_all($cache_cid, 'cache_block', TRUE);
     drupal_set_message(t('Block %cid cache cleared.', array('%cid' => $cache_cid)));
   }
+
+  drupal_goto();
+}
+
+/**
+ * Page & Boost clear cache callback.
+ */
+function ui_cache_clear_page_callback($name = NULL) {
+  global $base_root;
+
+  $urls = array();
+
+  $referer = $_SERVER['HTTP_REFERER'];
+  if (strpos($referer, $base_root) !== 0) {
+    drupal_goto();
+    return;
+  }
+  $urls[] = $referer;
+
+  // Find alias.
+  $raw_path = str_replace($base_root . '/', '', $referer);
+  if (empty($raw_path)) {
+    // Front page.
+    $system_path = variable_get('site_frontpage', 'node');
+  }
+  else {
+    $system_path = drupal_get_normal_path($raw_path);
+  }
+  if ($system_path != $raw_path) {
+    $urls[] = $base_root . '/' . $system_path;
+  }
+
+  // Clear boost cache.
+  if (function_exists('boost_expire_cache')) {
+    boost_expire_cache($urls);
+  }
+
+  // Chear page cache.
+  if (variable_get('cache', 0)) {
+    foreach ($urls as $url) {
+      cache_clear_all($url, 'cache_page');
+    }
+  }
+
+  drupal_set_message(t('Page cache cleared for %urls.', array('%urls' => implode(', ', $urls))));
 
   drupal_goto();
 }
