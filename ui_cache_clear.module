@@ -68,8 +68,16 @@ function ui_cache_clear_menu() {
     );
   }
 
+  $items['admin/config/development/performance/ui_cache_clear'] = array(
+    'title' => 'UI Cache Clear',
+    'title callback' => FALSE,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ui_cache_clear_admin_settings_form'),
+    'access arguments' => array('administer site configuration'),
+  );
+
   $items['admin/config/development/performance/ui_cache_clear/page'] = array(
-    'title' => 'Clear page cache',
+    'title' => 'Clear this page cache',
     'type' => MENU_CALLBACK,
     'page callback' => 'ui_cache_clear_page_callback',
     'access arguments' => array('use clear cache ui'),
@@ -88,6 +96,27 @@ function ui_cache_clear_permission() {
       'description' => t('Use contextual links to flush blocks, Views and Panels cache.'),
     ),
   );
+}
+
+/**
+ * UI Cache Clear settings form.
+ */
+function ui_cache_clear_admin_settings_form() {
+
+  // Allow to add shortcut for page/Boost cache clearing.
+  if (module_exists('shortcut')) {
+    $form['add_shortcut'] = _ui_cache_clear_add_shortcut_link();
+  }
+
+  $form['ui_cache_clear:always_clear_page'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Automaticaly clear current Page/Boost cache when use UI Cache Clear links'),
+    '#description' => t('When clear Block, Views or Panels cache with UI Cache Clear, additionally clear current Page/Boost cache.'),
+    '#default_value' => variable_get('ui_cache_clear:always_clear_page', 0),
+  );
+
+  $form = system_settings_form($form);
+  return $form;
 }
 
 /**
@@ -161,7 +190,25 @@ function ui_cache_clear_admin_menu_output_build(&$content) {
   else {
     // Add link to upper level of Admin menu.
     $content['icon']['icon']['ui_cache_clear'] = $item;
-    $content['icon']['icon']['ui_cache_clear']['#title'] = t('Current page & Boost cache flush');
+    $content['icon']['icon']['ui_cache_clear']['#title'] = t('Clear this page cache');
+  }
+}
+
+/**
+ * Implements hook_menu_link_alter().
+ */
+function ui_cache_clear_menu_link_alter(&$item) {
+  if ($item['link_path'] == 'admin/config/development/performance/ui_cache_clear/page') {
+    $item['options']['alter'] = TRUE;
+  }
+}
+
+/**
+ * Implements hook_translated_menu_item_alter().
+ */
+function ui_cache_clear_translated_menu_link_alter(&$item) {
+  if ($item['href'] == 'admin/config/development/performance/ui_cache_clear/page') {
+    $item['localized_options']['query'] = drupal_get_destination();
   }
 }
 
@@ -173,6 +220,7 @@ function ui_cache_clear_block_callback($module, $delta) {
   cache_clear_all($cache_cid, 'cache_block', TRUE);
   drupal_set_message(t('Block %cid cache cleared.', array('%cid' => $cache_cid)));
 
+  ui_cache_clear_page();
   drupal_goto();
 }
 
@@ -210,29 +258,44 @@ function ui_cache_clear_views_callback($display_id) {
     drupal_set_message(t('Block %cid cache cleared.', array('%cid' => $cache_cid)));
   }
 
+  ui_cache_clear_page();
   drupal_goto();
 }
 
 /**
  * Page & Boost clear cache callback.
  */
-function ui_cache_clear_page_callback($name = NULL) {
+function ui_cache_clear_page_callback() {
+  ui_cache_clear_page(FALSE);
+  drupal_goto();
+}
+
+/**
+ * Page & Boost clear cache helper function.
+ */
+function ui_cache_clear_page($check_setting = TRUE) {
   global $base_root;
+
+  if ($check_setting && !variable_get('ui_cache_clear:always_clear_page', 0)) {
+    return;
+  }
 
   $urls = array();
 
   $referer = $_SERVER['HTTP_REFERER'];
   if (strpos($referer, $base_root) !== 0) {
-    drupal_goto();
     return;
   }
   $urls[] = $referer;
 
   // Find alias.
+  $front = variable_get('site_frontpage', 'node');
   $raw_path = str_replace($base_root . '/', '', $referer);
   if (empty($raw_path)) {
-    // Front page.
-    $system_path = variable_get('site_frontpage', 'node');
+    $system_path = $front;
+  }
+  elseif ($raw_path == $front) {
+    $system_path = '';
   }
   else {
     $system_path = drupal_get_normal_path($raw_path);
@@ -254,8 +317,6 @@ function ui_cache_clear_page_callback($name = NULL) {
   }
 
   drupal_set_message(t('Page cache cleared for %urls.', array('%urls' => implode(', ', $urls))));
-
-  drupal_goto();
 }
 
 /**
@@ -285,4 +346,51 @@ function ui_cache_clear_panels_contextual_links($handler, $plugin, $contexts, $a
     'query' => drupal_get_destination(),
   );
   return $links;
+}
+
+/**
+ * Helper function to output "Add Shortcut" link on settings page.
+ * @see shortcut_preprocess_page()
+ */
+function _ui_cache_clear_add_shortcut_link() {
+  $element = array();
+
+  $link = 'admin/config/development/performance/ui_cache_clear/page';
+  $shortcut_set = shortcut_current_displayed_set();
+
+  foreach ($shortcut_set->links as $shortcut) {
+    if ($link == $shortcut['link_path']) {
+      $mlid = $shortcut['mlid'];
+      break;
+    }
+  }
+  if (empty($mlid)) {
+    $query = array(
+      'link' => $link,
+      'name' => 'Clear this page cache',
+    );
+    $query += drupal_get_destination();
+    $query['token'] = drupal_get_token('shortcut-add-link');
+
+    $link_text = shortcut_set_switch_access() ? t('Add to %shortcut_set shortcuts', array('%shortcut_set' => $shortcut_set->title)) : t('Add to shortcuts');
+    $link_path = 'admin/config/user-interface/shortcut/' . $shortcut_set->set_name . '/add-link-inline';
+
+    $element = array(
+      '#type' => 'fieldset',
+      '#title' => t('Add shortcut “@link”', array('@link' => t('Clear this page cache'))),
+    );
+    $element['link'] = array(
+      '#attached' => array('css' => array(drupal_get_path('module', 'shortcut') . '/shortcut.css')),
+      '#prefix' => '<div class="add-or-remove-shortcuts add-shortcut">',
+      '#type' => 'link',
+      '#title' => '<span class="icon"></span><span class="text">' . $link_text . '</span>',
+      '#href' => $link_path,
+      '#options' => array('query' => $query, 'html' => TRUE),
+      '#suffix' => '</div>',
+    );
+    $element['after']['#markup'] = '<br />';
+
+  }
+
+  return $element;
 }

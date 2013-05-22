@@ -36,6 +36,7 @@ function ui_cache_clear_panels_callback($task_name, $handler_name) {
 
   drupal_set_message(t('Panel %panel cache cleared.', array('%panel' => $task['title'])));
 
+  ui_cache_clear_page();
   drupal_goto();
 }
 

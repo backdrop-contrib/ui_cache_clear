@@ -3,3 +3,4 @@ description = Administrative interface for clearing Blocks, Views and Panels cac
 package = Administration
 core = 7.x
 dependencies[] = contextual
+configure = admin/config/development/performance/ui_cache_clear
