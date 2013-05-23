@@ -1,0 +1,7 @@
+
+UI Cache Clear 7.x-1.x, xxxx-xx-xx
+------------------------------
+
+UI Cache Clear 7.x-1.0-beta2, 2013-05-23
+------------------------------
+By kalabro: Added "Clear current page" link with Boost support. Integrated in Admin menu and Shortcut modules.
