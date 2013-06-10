@@ -4,3 +4,5 @@ package = Administration
 core = 7.x
 dependencies[] = contextual
 configure = admin/config/development/performance/ui_cache_clear
+
+files[] = ui_cache_clear.test
