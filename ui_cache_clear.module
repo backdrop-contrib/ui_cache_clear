@@ -68,6 +68,30 @@ function ui_cache_clear_menu() {
     );
   }
 
+  if (module_exists('path_breadcrumbs_ui')) {
+    // Special root item with custom access arguments.
+    $items['admin/structure/path-breadcrumbs/ui_cache_clear/%'] = array(
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'access callback' => 'user_access',
+      'access arguments' => array('use clear cache ui'),
+      'tab_root' => 'admin/structure/path-breadcrumbs/ui_cache_clear',
+      'tab_parent' => 'admin/structure/path-breadcrumbs/ui_cache_clear',
+    );
+
+    $items['admin/structure/path-breadcrumbs/edit/%/cacheclear'] = array(
+      'title' => 'Clear cache',
+      'page callback' => 'ui_cache_clear_path_breadcrumbs_callback',
+      'page arguments' => array(4),
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_INLINE,
+      'access callback' => 'user_access',
+      'access arguments' => array('use clear cache ui'),
+      'tab_root' => 'admin/structure/path-breadcrumbs/ui_cache_clear',
+      'tab_parent' => 'admin/structure/path-breadcrumbs/ui_cache_clear',
+
+    );
+  }
+
   $items['admin/config/development/performance/ui_cache_clear'] = array(
     'title' => 'UI Cache Clear',
     'title callback' => FALSE,
@@ -171,6 +195,15 @@ function ui_cache_clear_contextual_links_view_alter(&$element, $items) {
     $display_id = $element['#element']['#views_contextual_links_info']['ui_cache_clear']['view_display_id'];
     $element['#links']['ui-cache-clear-']['href'] .= '/' . $display_id;
   }
+
+  if (isset($element['#links']['path-breadcrumbs-main']) && variable_get('path_breadcrumbs_cache_enabled', FALSE)) {
+    if (preg_match('@admin/structure/path-breadcrumbs/edit/([\w-_]+)/main@', $element['#links']['path-breadcrumbs-main']['href'], $matches)) {
+      $path_breadcrumbs_name = $matches[1];
+      $element['#links']['ui-cache-clear-'] = $element['#links']['path-breadcrumbs-main'];
+      $element['#links']['ui-cache-clear-']['title'] = t('Clear cache');
+      $element['#links']['ui-cache-clear-']['href'] = "admin/structure/path-breadcrumbs/edit/$path_breadcrumbs_name/cacheclear";
+    }
+  }
 }
 
 /**
@@ -267,6 +300,19 @@ function ui_cache_clear_views_callback($display_id) {
  */
 function ui_cache_clear_page_callback() {
   ui_cache_clear_page(FALSE);
+  drupal_goto();
+}
+
+/**
+ * Path Breadcrumbs clear cache callback.
+ */
+function ui_cache_clear_path_breadcrumbs_callback($path_breadcrumb) {
+  $query = drupal_get_destination();
+  $cache_cid = 'path_breadcrumbs_load_variant:' . $query['destination'];
+
+  cache_clear_all($cache_cid, PATH_BREADCRUMBS_CACHE_STORAGE, TRUE);
+  drupal_set_message(t('Path Breadcrumbs %cid cache cleared.', array('%cid' => $cache_cid)));
+
   drupal_goto();
 }
 
