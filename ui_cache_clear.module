@@ -152,6 +152,10 @@ function ui_cache_clear_block_view_alter(&$data, $block) {
     return;
   }
 
+  if (empty($data)) {
+    return;
+  }
+
   if (!empty($data['content']['#contextual_links']['ui_cache_clear'])) {
     // Views hook_contextual_links_view_alter already added contextual link.
     return;
