@@ -390,8 +390,11 @@ function ui_cache_clear_panels_contextual_links($handler, $plugin, $contexts, $a
     return;
   }
 
+  // Page Manager may use and may not use subtasks.
+  $task_combined = $handler->task . ':' . $handler->subtask;
+
   $links[] = array(
-    'href' => 'admin/structure/pages/nojs/operation/' . $handler->task . '/handlers/' . $handler->name . '/cache_clear',
+    'href' => 'admin/structure/pages/nojs/operation/' . $task_combined . '/handlers/' . $handler->name . '/cache_clear',
     'title' => t('Clear cache'),
     'query' => drupal_get_destination(),
   );

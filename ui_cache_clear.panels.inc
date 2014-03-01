@@ -10,11 +10,11 @@
  */
 function ui_cache_clear_panels_callback($task_name, $handler_name) {
   ctools_include('plugins', 'panels');
+  list($task_name, $subtask_id) = explode(':', $task_name);
   // Load Page Manager task.
   $task = page_manager_get_task($task_name);
+  $subtask = page_manager_get_task_subtask($task, $subtask_id);
   // Load Panels handler.
-  // @todo Research what is subtask here.
-  $subtask_id = '';
   $handler = page_manager_load_task_handler($task, $subtask_id, $handler_name);
   // Load panels/plugins/task_handlers/panel_context.inc
   ctools_get_plugins('page_manager', 'task_handlers', 'panel_context');
@@ -34,7 +34,8 @@ function ui_cache_clear_panels_callback($task_name, $handler_name) {
   // Manualy clear caches for cache plugins with known problems.
   _ui_cache_clear_panels_clear_cached_content($display);
 
-  drupal_set_message(t('Panel %panel cache cleared.', array('%panel' => $task['title'])));
+  $panel_title = isset($subtask['admin title']) ? $subtask['admin title'] : $task['title'];
+  drupal_set_message(t('Panel %panel cache cleared.', array('%panel' => $panel_title)));
 
   ui_cache_clear_page();
   drupal_goto();

@@ -1,6 +1,9 @@
-
 UI Cache Clear 7.x-1.x, xxxx-xx-xx
 ------------------------------
+
+
+UI Cache Clear 7.x-1.0-beta5, 2014-03-01
+by kalabro: Added support for Ctools 1.4/Panels 3.4.
 
 
 UI Cache Clear 7.x-1.0-beta4, 2013-09-30
