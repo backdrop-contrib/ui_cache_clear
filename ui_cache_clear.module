@@ -165,7 +165,7 @@ function ui_cache_clear_block_view_alter(&$data, $block) {
     // Convert block content to array if $data is HTML string.
     if (!is_array($data)) {
       $output = $data;
-      $data['content'] = array('#markup' => $output);
+      $data = array('content' => array('#markup' => $output));
     }
     // Ensure 'content' key exists.
     if (empty($data['content'])) {
