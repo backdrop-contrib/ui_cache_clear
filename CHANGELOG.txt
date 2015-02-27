@@ -1,6 +1,6 @@
 UI Cache Clear 7.x-1.x, xxxx-xx-xx
 ------------------------------
-
+#2428751 by david_garcia, kalabro: Fixed Cannot use string offset as an array in ui_cache_clear_block_view_alter().
 
 UI Cache Clear 7.x-1.0-beta5, 2014-03-01
 by kalabro: Added support for Ctools 1.4/Panels 3.4.
