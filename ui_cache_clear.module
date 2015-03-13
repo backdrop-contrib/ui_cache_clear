@@ -147,7 +147,7 @@ function ui_cache_clear_admin_settings_form() {
  * Implements hook_block_view_alter().
  */
 function ui_cache_clear_block_view_alter(&$data, $block) {
-  if ($block->cache == DRUPAL_NO_CACHE) {
+  if (!isset($block->cache) || $block->cache == DRUPAL_NO_CACHE) {
     // Cache disabled for this block.
     return;
   }
