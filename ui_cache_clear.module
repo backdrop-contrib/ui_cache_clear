@@ -92,6 +92,40 @@ function ui_cache_clear_menu() {
     );
   }
 
+  if (module_exists('entitycache')) {
+    // NOTE 1: Only for nodes now.
+    // NOTE 2: This will be additionally displayed as local tab on node/% page.
+    $items['node/%node/ui_cache_clear/entitycache'] = array(
+      'title' => 'Clear entity cache',
+      'page callback' => 'ui_cache_clear_entitycache_callback',
+      'page arguments' => array('node', 1),
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+      'access callback' => 'user_access',
+      'access arguments' => array('use clear cache ui'),
+      'tab_root' => 'node/%',
+      'tab_parent' => 'node/%',
+      'weight' => 10,
+    );
+  }
+
+  if (module_exists('display_cache')) {
+    // NOTE 1: Only for nodes now.
+    // NOTE 2: This will be additionally displayed as local tab on node/% page.
+    $items['node/%node/ui_cache_clear/display_cache'] = array(
+      'title' => 'Clear display cache',
+      'page callback' => 'ui_cache_clear_display_cache_callback',
+      'page arguments' => array('node', 1),
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+      'access callback' => 'user_access',
+      'access arguments' => array('use clear cache ui'),
+      'tab_root' => 'node/%',
+      'tab_parent' => 'node/%',
+      'weight' => 20,
+    );
+  }
+
   $items['admin/config/development/performance/ui_cache_clear'] = array(
     'title' => 'UI Cache Clear',
     'title callback' => FALSE,
@@ -324,6 +358,43 @@ function ui_cache_clear_path_breadcrumbs_callback($path_breadcrumb) {
   drupal_set_message(t('Path Breadcrumbs %cid cache cleared.', array('%cid' => $cache_cid)));
 
   drupal_goto();
+}
+
+/**
+ * Entity cache clear callback.
+ */
+function ui_cache_clear_entitycache_callback($entity_type, $entity) {
+  list($entity_id) = entity_extract_ids($entity_type, $entity);
+  entity_get_controller($entity_type)->resetCache(array($entity_id));
+  drupal_set_message(t('Entity cache for %entity_type %entity_id was cleared.', array('%entity_type' => $entity_type, '%entity_id' => $entity_id)));
+
+  drupal_goto();
+}
+
+/**
+ * Display Cache clear callback.
+ */
+function ui_cache_clear_display_cache_callback($entity_type, $entity) {
+  list($entity_id) = entity_extract_ids($entity_type, $entity);
+  display_cache_flush_cache($entity_type, $entity);
+  drupal_set_message(t('Display cache for %entity_type %entity_id was cleared.', array('%entity_type' => $entity_type, '%entity_id' => $entity_id)));
+
+  drupal_goto();
+}
+
+/**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function ui_cache_clear_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+  foreach ($data['tabs'] as &$tab_level) {
+    foreach ($tab_level['output'] as &$tab) {
+      // Add destination parameter to local tabs links.
+      if ($tab['#link']['path'] == 'node/%/ui_cache_clear/entitycache' || $tab['#link']['path'] == 'node/%/ui_cache_clear/display_cache') {
+        $tab['#link']['localized_options'] += array('query' => array());
+        $tab['#link']['localized_options']['query'] += drupal_get_destination();
+      }
+    }
+  }
 }
 
 /**
