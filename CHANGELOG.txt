@@ -1,6 +1,10 @@
 UI Cache Clear 7.x-1.x, xxxx-xx-xx
 ------------------------------
 
+UI Cache Clear 7.x-1.0-beta8, 2015-06-17
+#2478617: Fixed Invalid argument supplied for foreach() in ui_cache_clear_menu_local_tasks_alter().
+
+
 UI Cache Clear 7.x-1.0-beta7, 2015-04-08
 #2467461 by duozersk: Added support for entitycache and display_cache for nodes.
 
