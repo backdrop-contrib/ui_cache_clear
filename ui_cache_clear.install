@@ -1,0 +1,17 @@
+<?php
+/**
+ * Install file
+ */
+
+/**
+ * Convert UI Cache Clear variables to config.
+ */
+function ui_cache_clear_update_1000() {
+  // Migrate variables to config.
+  $config = config('ui_cache_clear.settings');
+  $config->set('always_clear_page', update_variable_get('ui_cache_clear:always_clear_page', 0));
+  $config->save();
+
+  // Delete variables.
+  update_variable_del('ui_cache_clear:always_clear_page');
+}

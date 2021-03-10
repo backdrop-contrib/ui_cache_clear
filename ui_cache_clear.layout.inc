@@ -8,7 +8,7 @@
 /**
  * Panels clear cache callback.
  */
-function ui_cache_clear_panels_callback($task_name, $handler_name) {
+function ui_cache_clear_layout_callback($task_name, $handler_name) {
   ctools_include('plugins', 'panels');
   list($task_name, $subtask_id) = explode(':', $task_name);
   // Load Page Manager task.
@@ -35,10 +35,10 @@ function ui_cache_clear_panels_callback($task_name, $handler_name) {
   _ui_cache_clear_panels_clear_cached_content($display);
 
   $panel_title = isset($subtask['admin title']) ? $subtask['admin title'] : $task['title'];
-  drupal_set_message(t('Panel %panel cache cleared.', array('%panel' => $panel_title)));
+  backdrop_set_message(t('Panel %panel cache cleared.', array('%panel' => $panel_title)));
 
   ui_cache_clear_page();
-  drupal_goto();
+  backdrop_goto();
 }
 
 /**

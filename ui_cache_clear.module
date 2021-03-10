@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Module adds contextual links for clearing Blocks, Views and Panels cache.
+ * Module adds contextual links for clearing Blocks, Views and Layout cache.
  */
 
 /**
@@ -10,29 +10,6 @@
  */
 function ui_cache_clear_menu() {
   $items = array();
-  if (module_exists('block')) {
-    // Special root item with custom access arguments.
-    $items['admin/structure/block/ui_cache_clear/%/%'] = array(
-      'type' => MENU_DEFAULT_LOCAL_TASK,
-      'access callback' => 'user_access',
-      'access arguments' => array('use clear cache ui'),
-      'tab_root' => 'admin/structure/block/ui_cache_clear/%',
-      'tab_parent' => 'admin/structure/block/ui_cache_clear/%',
-    );
-
-    $items['admin/structure/block/manage/%/%/cacheclear'] = array(
-      'title' => 'Clear cache',
-      'page callback' => 'ui_cache_clear_block_callback',
-      'page arguments' => array(4, 5),
-      'type' => MENU_LOCAL_TASK,
-      'context' => MENU_CONTEXT_INLINE,
-      'access callback' => 'user_access',
-      'access arguments' => array('use clear cache ui'),
-      'tab_root' => 'admin/structure/block/ui_cache_clear/%',
-      'tab_parent' => 'admin/structure/block/ui_cache_clear/%',
-
-    );
-  }
 
   if (module_exists('views_ui')) {
     // Special root item with custom access arguments.
@@ -56,15 +33,16 @@ function ui_cache_clear_menu() {
     );
   }
 
-  if (module_exists('page_manager') && module_exists('panels')) {
-    $items['admin/structure/pages/%/operation/%/handlers/%/cache_clear'] = array(
+  if (module_exists('layout_was_panels')) {
+    $items['admin/structure/layouts/manage/%/operation/%/handlers/%/cache_clear'] = array(
       'title' => 'Clear cache',
-      'page callback' => 'ui_cache_clear_panels_callback',
+      'page callback' => 'ui_cache_clear_layout_callback',
       'page arguments' => array(5, 7),
       'type' => MENU_LOCAL_TASK,
       'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+      'weight' => 20,
       'access arguments' => array('use clear cache ui'),
-      'file' => 'ui_cache_clear.panels.inc',
+      'file' => 'ui_cache_clear.layout.inc',
     );
   }
 
@@ -92,22 +70,20 @@ function ui_cache_clear_menu() {
     );
   }
 
-  if (module_exists('entitycache')) {
-    // NOTE 1: Only for nodes now.
-    // NOTE 2: This will be additionally displayed as local tab on node/% page.
-    $items['node/%node/ui_cache_clear/entitycache'] = array(
-      'title' => 'Clear entity cache',
-      'page callback' => 'ui_cache_clear_entitycache_callback',
-      'page arguments' => array('node', 1),
-      'type' => MENU_LOCAL_TASK,
-      'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-      'access callback' => 'user_access',
-      'access arguments' => array('use clear cache ui'),
-      'tab_root' => 'node/%',
-      'tab_parent' => 'node/%',
-      'weight' => 10,
-    );
-  }
+  // NOTE 1: Only for nodes now.
+  // NOTE 2: This will be additionally displayed as local tab on node/% page.
+  $items['node/%node/ui_cache_clear/entitycache'] = array(
+    'title' => 'Clear cache',
+    'page callback' => 'ui_cache_clear_entitycache_callback',
+    'page arguments' => array('node', 1),
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'access callback' => 'user_access',
+    'access arguments' => array('use clear cache ui'),
+    'tab_root' => 'node/%',
+    'tab_parent' => 'node/%',
+    'weight' => 10,
+  );
 
   if (module_exists('display_cache')) {
     // NOTE 1: Only for nodes now.
@@ -126,12 +102,18 @@ function ui_cache_clear_menu() {
     );
   }
 
+  $items['admin/config/development/performance/settings'] = array(
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'title' => 'Settings',
+    'weight' => 1,
+  );
   $items['admin/config/development/performance/ui_cache_clear'] = array(
-    'title' => 'UI Cache Clear',
-    'title callback' => FALSE,
-    'page callback' => 'drupal_get_form',
+    'type' => MENU_LOCAL_TASK,
+    'title' => 'UI Cache Clear Settings',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('ui_cache_clear_admin_settings_form'),
     'access arguments' => array('administer site configuration'),
+    'weight' => 2,
   );
 
   $items['admin/config/development/performance/ui_cache_clear/page'] = array(
@@ -151,7 +133,7 @@ function ui_cache_clear_permission() {
   return array(
     'use clear cache ui' => array(
       'title' => t('Use contextual UI Cache Clear links'),
-      'description' => t('Use contextual links to flush blocks, Views and Panels cache.'),
+      'description' => t('Use contextual links to clear the cache of individual Views, Content and Layouts.'),
     ),
   );
 }
@@ -166,55 +148,16 @@ function ui_cache_clear_admin_settings_form() {
     $form['add_shortcut'] = _ui_cache_clear_add_shortcut_link();
   }
 
-  $form['ui_cache_clear:always_clear_page'] = array(
+  $form['#config'] = 'ui_cache_clear.settings';
+  $form['always_clear_page'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Automaticaly clear current Page/Boost cache when use UI Cache Clear links'),
-    '#description' => t('When clear Block, Views or Panels cache with UI Cache Clear, additionally clear current Page/Boost cache.'),
-    '#default_value' => variable_get('ui_cache_clear:always_clear_page', 0),
+    '#title' => t('Automaticaly clear current Page/Boost cache when using UI Cache Clear links'),
+    '#description' => t('When clearing Block, Views or Layout cache with UI Cache Clear, additionally clear current Page/Boost cache.'),
+    '#default_value' => config_get('ui_cache_clear.settings', 'always_clear_page'),
   );
 
   $form = system_settings_form($form);
   return $form;
-}
-
-/**
- * Implements hook_block_view_alter().
- */
-function ui_cache_clear_block_view_alter(&$data, $block) {
-  if (!isset($block->cache) || $block->cache == DRUPAL_NO_CACHE) {
-    // Cache disabled for this block.
-    return;
-  }
-
-  if (empty($data)) {
-    return;
-  }
-
-  if (!empty($data['content']['#contextual_links']['ui_cache_clear'])) {
-    // Views hook_contextual_links_view_alter already added contextual link.
-    return;
-  }
-  $key = $block->module . '_' . $block->delta;
-  if ($key != 'system_main' && $key != 'system_help') {
-    // Convert block content to array if $data is HTML string.
-    if (!is_array($data)) {
-      $output = $data;
-      $data = array('content' => array('#markup' => $output));
-    }
-    // Ensure 'content' key exists.
-    if (empty($data['content'])) {
-      $data['content'] = array();
-    }
-    // Convert block content to array if $data['content'] is HTML string.
-    if (!is_array($data['content'])) {
-      $data['content'] = array('#markup' => $data['content']);
-    }
-    $data['content']['#contextual_links']['ui_cache_clear'] = array(
-      'admin/structure/block/ui_cache_clear',
-      array($block->module, $block->delta),
-    );
-  }
-
 }
 
 /**
@@ -240,7 +183,7 @@ function ui_cache_clear_contextual_links_view_alter(&$element, $items) {
     $element['#links']['ui-cache-clear-']['href'] .= '/' . $display_id;
   }
 
-  if (isset($element['#links']['path-breadcrumbs-main']) && variable_get('path_breadcrumbs_cache_enabled', FALSE)) {
+  if (isset($element['#links']['path-breadcrumbs-main']) && config_get('path_breadcrumbs.settings', 'cache_enabled')) {
     if (preg_match('@admin/structure/path-breadcrumbs/edit/([\w-_]+)/main@', $element['#links']['path-breadcrumbs-main']['href'], $matches)) {
       $path_breadcrumbs_name = $matches[1];
       $element['#links']['ui-cache-clear-'] = $element['#links']['path-breadcrumbs-main'];
@@ -285,20 +228,8 @@ function ui_cache_clear_menu_link_alter(&$item) {
  */
 function ui_cache_clear_translated_menu_link_alter(&$item) {
   if ($item['href'] == 'admin/config/development/performance/ui_cache_clear/page') {
-    $item['localized_options']['query'] = drupal_get_destination();
+    $item['localized_options']['query'] = backdrop_get_destination();
   }
-}
-
-/**
- * Block clear cache callback.
- */
-function ui_cache_clear_block_callback($module, $delta) {
-  $cache_cid = $module . ':' . $delta;
-  cache_clear_all($cache_cid, 'cache_block', TRUE);
-  drupal_set_message(t('Block %cid cache cleared.', array('%cid' => $cache_cid)));
-
-  ui_cache_clear_page();
-  drupal_goto();
 }
 
 /**
@@ -318,25 +249,10 @@ function ui_cache_clear_views_callback($display_id) {
 
   // Clear views cache.
   cache_clear_all($cache_cid, 'cache_views_data', TRUE);
-  drupal_set_message(t('Views %cid cache cleared for cache plugin %plugin.', array('%cid' => $cache_cid, '%plugin' => $plugin_name)));
-
-  // Clear block cache if needed.
-  if ($view->display_handler->plugin_name == 'block' &&
-      $view->display_handler->get_cache_type() != DRUPAL_NO_CACHE
-      ) {
-
-    $delta = $view_name . '-' . $view->current_display;
-    // @see views_plugin_display_block::save_block_cache().
-    if (strlen($delta) >= 32) {
-      $delta = md5($delta);
-    }
-    $cache_cid = 'views:' . $delta;
-    cache_clear_all($cache_cid, 'cache_block', TRUE);
-    drupal_set_message(t('Block %cid cache cleared.', array('%cid' => $cache_cid)));
-  }
+  backdrop_set_message(t('Views %cid cache cleared for cache plugin %plugin.', array('%cid' => $cache_cid, '%plugin' => $plugin_name)));
 
   ui_cache_clear_page();
-  drupal_goto();
+  backdrop_goto();
 }
 
 /**
@@ -344,20 +260,20 @@ function ui_cache_clear_views_callback($display_id) {
  */
 function ui_cache_clear_page_callback() {
   ui_cache_clear_page(FALSE);
-  drupal_goto();
+  backdrop_goto();
 }
 
 /**
  * Path Breadcrumbs clear cache callback.
  */
 function ui_cache_clear_path_breadcrumbs_callback($path_breadcrumb) {
-  $query = drupal_get_destination();
+  $query = backdrop_get_destination();
   $cache_cid = 'path_breadcrumbs_load_variant:' . $query['destination'];
 
   cache_clear_all($cache_cid, PATH_BREADCRUMBS_CACHE_STORAGE, TRUE);
-  drupal_set_message(t('Path Breadcrumbs %cid cache cleared.', array('%cid' => $cache_cid)));
+  backdrop_set_message(t('Path Breadcrumbs %cid cache cleared.', array('%cid' => $cache_cid)));
 
-  drupal_goto();
+  backdrop_goto();
 }
 
 /**
@@ -366,9 +282,9 @@ function ui_cache_clear_path_breadcrumbs_callback($path_breadcrumb) {
 function ui_cache_clear_entitycache_callback($entity_type, $entity) {
   list($entity_id) = entity_extract_ids($entity_type, $entity);
   entity_get_controller($entity_type)->resetCache(array($entity_id));
-  drupal_set_message(t('Entity cache for %entity_type %entity_id was cleared.', array('%entity_type' => $entity_type, '%entity_id' => $entity_id)));
+  backdrop_set_message(t('Entity cache for %entity_type %entity_id was cleared.', array('%entity_type' => $entity_type, '%entity_id' => $entity_id)));
 
-  drupal_goto();
+  backdrop_goto();
 }
 
 /**
@@ -377,9 +293,9 @@ function ui_cache_clear_entitycache_callback($entity_type, $entity) {
 function ui_cache_clear_display_cache_callback($entity_type, $entity) {
   list($entity_id) = entity_extract_ids($entity_type, $entity);
   display_cache_flush_cache($entity_type, $entity);
-  drupal_set_message(t('Display cache for %entity_type %entity_id was cleared.', array('%entity_type' => $entity_type, '%entity_id' => $entity_id)));
+  backdrop_set_message(t('Display cache for %entity_type %entity_id was cleared.', array('%entity_type' => $entity_type, '%entity_id' => $entity_id)));
 
-  drupal_goto();
+  backdrop_goto();
 }
 
 /**
@@ -392,7 +308,7 @@ function ui_cache_clear_menu_local_tasks_alter(&$data, $router_item, $root_path)
         // Add destination parameter to local tabs links.
         if ($tab['#link']['path'] == 'node/%/ui_cache_clear/entitycache' || $tab['#link']['path'] == 'node/%/ui_cache_clear/display_cache') {
           $tab['#link']['localized_options'] += array('query' => array());
-          $tab['#link']['localized_options']['query'] += drupal_get_destination();
+          $tab['#link']['localized_options']['query'] += backdrop_get_destination();
         }
       }
     }
@@ -405,7 +321,7 @@ function ui_cache_clear_menu_local_tasks_alter(&$data, $router_item, $root_path)
 function ui_cache_clear_page($check_setting = TRUE) {
   global $base_root;
 
-  if ($check_setting && !variable_get('ui_cache_clear:always_clear_page', 0)) {
+  if ($check_setting && !config_get('ui_cache_clear.settings', 'always_clear_page')) {
     return;
   }
 
@@ -418,7 +334,7 @@ function ui_cache_clear_page($check_setting = TRUE) {
   $urls[] = $referer;
 
   // Find alias.
-  $front = variable_get('site_frontpage', 'node');
+  $front = config_get('system.core', 'site_frontpage');
   $raw_path = str_replace($base_root . '/', '', $referer);
   if (empty($raw_path)) {
     $system_path = $front;
@@ -427,7 +343,7 @@ function ui_cache_clear_page($check_setting = TRUE) {
     $system_path = '';
   }
   else {
-    $system_path = drupal_get_normal_path($raw_path);
+    $system_path = backdrop_get_normal_path($raw_path);
   }
   if ($system_path != $raw_path) {
     $urls[] = $base_root . '/' . $system_path;
@@ -438,31 +354,31 @@ function ui_cache_clear_page($check_setting = TRUE) {
     boost_expire_cache($urls);
   }
 
-  // Chear page cache.
-  if (variable_get('cache', 0)) {
+  // Clear page cache.
+  if (config_get('system.core', 'cache')) {
     foreach ($urls as $url) {
       cache_clear_all($url, 'cache_page');
     }
   }
 
-  drupal_set_message(t('Page cache cleared for %urls.', array('%urls' => implode(', ', $urls))));
+  backdrop_set_message(t('Page cache cleared for %urls.', array('%urls' => implode(', ', $urls))));
 }
 
 /**
  * Implements hook_ctools_plugin_pre_alter().
  *
- * Overwrite Panels 'contextual link' callback to add link "Clear cache".
+ * Overwrite Layout 'contextual link' callback to add link "Clear cache".
  */
 function ui_cache_clear_ctools_plugin_pre_alter(&$plugin, &$info) {
   if ($info['type'] == 'task_handlers' && $plugin['name'] == 'panel_context') {
-    $plugin['contextual link'] = 'ui_cache_clear_panels_contextual_links';
+    $plugin['contextual link'] = 'ui_cache_clear_layout_contextual_links';
   }
 }
 
 /**
- * Contextual link callback for Panels task handler.
+ * Contextual link callback for Layout task handler.
  */
-function ui_cache_clear_panels_contextual_links($handler, $plugin, $contexts, $args) {
+function ui_cache_clear_layout_contextual_links($handler, $plugin, $contexts, $args) {
   // Add default links.
   $links = ctools_task_handler_default_contextual_link($handler, $plugin, $contexts, $args);
   if (!user_access('use clear cache ui')) {
@@ -475,7 +391,7 @@ function ui_cache_clear_panels_contextual_links($handler, $plugin, $contexts, $a
   $links[] = array(
     'href' => 'admin/structure/pages/nojs/operation/' . $task_combined . '/handlers/' . $handler->name . '/cache_clear',
     'title' => t('Clear cache'),
-    'query' => drupal_get_destination(),
+    'query' => backdrop_get_destination(),
   );
   return $links;
 }
@@ -501,8 +417,8 @@ function _ui_cache_clear_add_shortcut_link() {
       'link' => $link,
       'name' => 'Clear this page cache',
     );
-    $query += drupal_get_destination();
-    $query['token'] = drupal_get_token('shortcut-add-link');
+    $query += backdrop_get_destination();
+    $query['token'] = backdrop_get_token('shortcut-add-link');
 
     $link_text = shortcut_set_switch_access() ? t('Add to %shortcut_set shortcuts', array('%shortcut_set' => $shortcut_set->title)) : t('Add to shortcuts');
     $link_path = 'admin/config/user-interface/shortcut/' . $shortcut_set->set_name . '/add-link-inline';
@@ -512,7 +428,7 @@ function _ui_cache_clear_add_shortcut_link() {
       '#title' => t('Add shortcut “@link”', array('@link' => t('Clear this page cache'))),
     );
     $element['link'] = array(
-      '#attached' => array('css' => array(drupal_get_path('module', 'shortcut') . '/shortcut.css')),
+      '#attached' => array('css' => array(backdrop_get_path('module', 'shortcut') . '/shortcut.css')),
       '#prefix' => '<div class="add-or-remove-shortcuts add-shortcut">',
       '#type' => 'link',
       '#title' => '<span class="icon"></span><span class="text">' . $link_text . '</span>',

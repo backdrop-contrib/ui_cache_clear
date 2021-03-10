@@ -8,7 +8,7 @@
 /**
  * Base class for UI Cache Clear tests.
  */
-class UICacheClearWebTestBase extends DrupalWebTestCase {
+class UICacheClearWebTestBase extends BackdropWebTestCase {
   protected $admin_user = NULL;
   protected $manager_user = NULL;
 
@@ -25,14 +25,14 @@ class UICacheClearWebTestBase extends DrupalWebTestCase {
       'access administration pages',
       'administer site configuration',
     );
-    $this->admin_user = $this->drupalCreateUser($admin_user_permissions);
+    $this->admin_user = $this->backdropCreateUser($admin_user_permissions);
 
     // Create manager user.
     $manager_user_permissions = array(
       'use clear cache ui',
       'access contextual links',
     );
-    $this->manager_user = $this->drupalCreateUser($manager_user_permissions);
+    $this->manager_user = $this->backdropCreateUser($manager_user_permissions);
   }
 
   /**
@@ -49,7 +49,7 @@ class UICacheClearWebTestBase extends DrupalWebTestCase {
     $this->assertTrue(isset($urls[$index]), t('Clicked link %label (@url_target) in element with id %id from @url_before', array('%label' => $label, '@url_target' => $url_target, '@url_before' => $url_before, '%id' => $element_id)), t('Browser'));
 
     if (isset($url_target)) {
-      return $this->drupalGet($url_target);
+      return $this->backdropGet($url_target);
     }
     return FALSE;
   }
@@ -59,14 +59,6 @@ class UICacheClearWebTestBase extends DrupalWebTestCase {
  * Tests of functionality and settings of UI Cache Clear module.
  */
 class UICacheClearBlockTestCase extends UICacheClearWebTestBase {
-
-  public static function getInfo() {
-    return array(
-      'name' => 'UI Cache Clear Block',
-      'description' => 'Tests of functionality and settings of UI Cache Clear module for blocks.',
-      'group' => 'UI Cache Clear',
-    );
-  }
 
   function setUp() {
     // Install the UI Cache Clear module.
@@ -83,43 +75,43 @@ class UICacheClearBlockTestCase extends UICacheClearWebTestBase {
     variable_set('block_test_content', $block_content);
 
     // Setup test block.
-    $this->enableTestBlock(array('cache' => DRUPAL_CACHE_PER_ROLE));
+    $this->enableTestBlock(array('cache' => BACKDROP_CACHE_PER_ROLE));
 
-    $this->drupalGet('');
+    $this->backdropGet('');
     $this->assertText($block_content, 'Test block successfuly enabled.');
 
     // Cache block for admin.
-    $this->drupalLogin($this->admin_user);
-    $this->drupalGet('');
+    $this->backdropLogin($this->admin_user);
+    $this->backdropGet('');
     // Cache block for manager.
-    $this->drupalLogin($this->manager_user);
-    $this->drupalGet('');
+    $this->backdropLogin($this->manager_user);
+    $this->backdropGet('');
 
     // Change block content.
     $block_content_old = $block_content;
     $block_content = $this->randomName(20);
     variable_set('block_test_content', $block_content);
 
-    $this->drupalGet('');
+    $this->backdropGet('');
     $this->assertText($block_content_old, 'Old test block data is displayed.');
     $this->assertNoText($block_content, 'New test block data is not displayed.');
 
     // Use UI Cache Clear as manager.
     $this->clickLinkInElement('block-block-test-test-cache', t('Clear cache'));
 
-    $this->drupalGet('');
+    $this->backdropGet('');
     $this->assertNoText($block_content_old, 'Old test block data is not displayed.');
     $this->assertText($block_content, 'New test block data is displayed.');
 
     // View as admin.
-    $this->drupalLogin($this->admin_user);
-    $this->drupalGet('');
+    $this->backdropLogin($this->admin_user);
+    $this->backdropGet('');
     $this->assertNoText($block_content_old, 'Old test block data is not displayed.');
     $this->assertText($block_content, 'New test block data is displayed.');
 
     // View as anonymous.
-    $this->drupalLogout();
-    $this->drupalGet('');
+    $this->backdropLogout();
+    $this->backdropGet('');
     $this->assertNoText($block_content_old, 'Old test block data is not displayed.');
     $this->assertText($block_content, 'New test block data is displayed.');
   }

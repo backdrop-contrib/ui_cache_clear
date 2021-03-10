@@ -1,0 +1,5 @@
+[UICacheClearBlockTestCase]
+name = UI Cache Clear Block
+description = Tests of functionality and settings of UI Cache Clear module for blocks.
+group = UI Cache Clear
+file = ui_cache_clear.test

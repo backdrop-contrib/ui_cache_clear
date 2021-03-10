@@ -1,8 +1,7 @@
 name = UI Cache Clear
-description = Administrative interface for clearing Blocks, Views and Panels cache.
+description = Administrative interface for clearing Blocks, Views and Layout cache.
 package = Administration
-core = 7.x
+backdrop = 1.x
+type = module
 dependencies[] = contextual
 configure = admin/config/development/performance/ui_cache_clear
-
-files[] = ui_cache_clear.test
